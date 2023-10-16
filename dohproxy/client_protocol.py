@@ -32,6 +32,8 @@ class StubServerProtocol:
         else:
             self.client_store = client_store
 
+        self.streams_id_array = []
+
     async def get_client(self, force_new=False):
         if force_new:
             self.client_store["client"] = None
@@ -124,7 +126,18 @@ class StubServerProtocol:
         # Start request with headers
         # FIXME: Find a better way to close old streams. See GH#11
         try:
+            if (len(self.streams_id_array) >= 10):
+                temp_id = self.streams_id_array[0]
+                self.logger.debug("Stream ID: {}".format(temp_id))
+                #client._streams.pop(temp_id)
+                client._priority.remove_stream(temp_id)
+                #priority.PriorityTree.remove_stream(self = client, stream_id = temp_id)
+                self.streams_id_array.pop(0)
+                
+
             stream_id = await self.on_start_request(client, headers, not body)
+            self.streams_id_array.append(stream_id)
+
         except priority.priority.TooManyStreamsError:
             client = await self.get_client(force_new=True)
             stream_id = await self.on_start_request(client, headers, not body)
